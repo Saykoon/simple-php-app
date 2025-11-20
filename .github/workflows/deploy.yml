@@ -66,7 +66,7 @@ jobs:
         key: ${{ secrets.PRIVATE_SSH_KEY }}
         passphrase: ${{ secrets.SSH_PASSPHRASE || '' }}
         source: "./"
-        target: "/var/www/vc/simple-php-app"
+        target: "/var/www/html/simple-php-app"
         overwrite: true
         rm: false
         strip_components: 0
@@ -79,8 +79,26 @@ jobs:
         key: ${{ secrets.PRIVATE_SSH_KEY }}
         passphrase: ${{ secrets.SSH_PASSPHRASE || '' }}
         script: |
-          cd /var/www/vc/simple-php-app
+          echo "=== CHECKING FILE LOCATIONS ==="
+          echo "Contents of /var/www/vc:"
+          ls -la /var/www/vc/ 2>/dev/null || echo "Directory /var/www/vc does not exist"
+          
+          echo "Contents of /var/www/vc/simple-php-app:"
+          ls -la /var/www/vc/simple-php-app/ 2>/dev/null || echo "Directory /var/www/vc/simple-php-app does not exist"
+          
+          echo "Contents of /var/www/html:"
+          ls -la /var/www/html/ 2>/dev/null || echo "Directory /var/www/html does not exist"
+          
+          echo "Apache document root:"
+          apache2ctl -S 2>/dev/null | grep DocumentRoot || echo "Could not determine Apache DocumentRoot"
+          
+          echo "=== SETTING UP APPLICATION ==="
+          cd /var/www/html/simple-php-app 2>/dev/null || cd /var/www/vc/simple-php-app 2>/dev/null || echo "Could not find application directory"
+          pwd
           chmod -R 755 . 2>/dev/null || echo "Permissions set as much as possible"
           mysql -h ${{ secrets.DB_HOST }} -P ${{ secrets.DB_PORT }} -u ${{ secrets.DB_USER }} -p'${{ secrets.DB_PASSWORD }}' ${{ secrets.DB_NAME }} < database.sql 2>/dev/null || echo "Database setup: tables may already exist"
           echo "Deployment completed successfully!"
-          echo "Application should be available at: http://${{ secrets.SERVER_HOST }}/simple-php-app/"
+          echo "Try these URLs:"
+          echo "- http://${{ secrets.SERVER_HOST }}/simple-php-app/"
+          echo "- http://${{ secrets.SERVER_HOST }}/vc/simple-php-app/"
+          echo "- http://${{ secrets.SERVER_HOST }}:8080/simple-php-app/"

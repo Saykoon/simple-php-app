@@ -44,17 +44,32 @@ jobs:
         ?>
         EOF
     
+    - name: Debug SSH key format
+      run: |
+        echo "Checking SSH key format..."
+        if [[ "${{ secrets.PRIVATE_SSH_KEY }}" == *"-----BEGIN"* ]]; then
+          echo "✅ SSH key starts correctly"
+        else
+          echo "❌ SSH key does not start with -----BEGIN"
+        fi
+        if [[ "${{ secrets.PRIVATE_SSH_KEY }}" == *"-----END"* ]]; then
+          echo "✅ SSH key ends correctly" 
+        else
+          echo "❌ SSH key does not end with -----END"
+        fi
+    
     - name: Copy files to server
       uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.PRIVATE_SSH_KEY }}
-        passphrase: ${{ secrets.SSH_PASSPHRASE }}
+        passphrase: ${{ secrets.SSH_PASSPHRASE || '' }}
         source: "./"
         target: "/var/www/vc/simple-php-app"
         overwrite: true
         rm: false
+        strip_components: 0
     
     - name: Set permissions and setup database
       uses: appleboy/ssh-action@v1.0.3
@@ -62,7 +77,7 @@ jobs:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.PRIVATE_SSH_KEY }}
-        passphrase: ${{ secrets.SSH_PASSPHRASE }}
+        passphrase: ${{ secrets.SSH_PASSPHRASE || '' }}
         script: |
           cd /var/www/vc/simple-php-app
           chmod -R 755 . 2>/dev/null || echo "Permissions set as much as possible"

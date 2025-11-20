@@ -19,7 +19,8 @@ jobs:
         cat > config.php << 'EOF'
         <?php
         // Production database configuration
-        define('DB_HOST', '${{ secrets.DB_HOST }}:${{ secrets.DB_PORT }}');
+        define('DB_HOST', '${{ secrets.DB_HOST }}');
+        define('DB_PORT', '${{ secrets.DB_PORT }}');
         define('DB_NAME', '${{ secrets.DB_NAME }}');
         define('DB_USER', '${{ secrets.DB_USER }}');
         define('DB_PASS', '${{ secrets.DB_PASSWORD }}');
@@ -28,12 +29,13 @@ jobs:
         function getConnection() {
             try {
                 $pdo = new PDO(
-                    "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8",
+                    "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=utf8",
                     DB_USER,
                     DB_PASS,
                     [
                         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                        PDO::ATTR_TIMEOUT => 10
                     ]
                 );
                 return $pdo;
@@ -96,6 +98,14 @@ jobs:
           cd /var/www/html/simple-php-app 2>/dev/null || cd /var/www/vc/simple-php-app 2>/dev/null || echo "Could not find application directory"
           pwd
           chmod -R 755 . 2>/dev/null || echo "Permissions set as much as possible"
+          
+          echo "=== TESTING DATABASE CONNECTION ==="
+          echo "Testing connection to ${{ secrets.DB_HOST }}:${{ secrets.DB_PORT }}"
+          nc -zv ${{ secrets.DB_HOST }} ${{ secrets.DB_PORT }} 2>&1 || echo "Cannot connect to database server"
+          
+          echo "=== CHECKING CONFIG.PHP ==="
+          cat config.php | head -10
+          
           mysql -h ${{ secrets.DB_HOST }} -P ${{ secrets.DB_PORT }} -u ${{ secrets.DB_USER }} -p'${{ secrets.DB_PASSWORD }}' ${{ secrets.DB_NAME }} < database.sql 2>/dev/null || echo "Database setup: tables may already exist"
           echo "Deployment completed successfully!"
           echo "Try these URLs:"

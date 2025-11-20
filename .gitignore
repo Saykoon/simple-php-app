@@ -1,0 +1,23 @@
+# IDE files
+.vscode/
+.idea/
+*.sublime-*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Configuration files (if containing sensitive data)
+# config.php (uncomment if you want to exclude database credentials)
+
+# Vendor directories
+vendor/
+node_modules/
+
+# Cache files
+*.cache

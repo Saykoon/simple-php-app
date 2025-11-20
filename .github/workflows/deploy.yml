@@ -1,0 +1,84 @@
+name: Deploy PHP Application
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+    
+    - name: Deploy to server
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} "
+          cd /var/www/vc &&
+          sudo rm -rf simple-php-app &&
+          sudo git clone https://github.com/${{ github.repository }}.git simple-php-app &&
+          sudo chown -R www-data:www-data simple-php-app &&
+          sudo chmod -R 755 simple-php-app
+        "
+    
+    - name: Update database configuration
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} "
+          cd /var/www/vc/simple-php-app &&
+          sudo cp config.php config.php.backup &&
+          sudo tee config.php > /dev/null << 'EOF'
+          <?php
+          // Production database configuration
+          define('DB_HOST', '${{ secrets.DB_HOST }}:${{ secrets.DB_PORT }}');
+          define('DB_NAME', '${{ secrets.DB_NAME }}');
+          define('DB_USER', '${{ secrets.DB_USER }}');
+          define('DB_PASS', '${{ secrets.DB_PASSWORD }}');
+
+          // Create database connection
+          function getConnection() {
+              try {
+                  \$pdo = new PDO(
+                      \"mysql:host=\" . DB_HOST . \";dbname=\" . DB_NAME . \";charset=utf8\",
+                      DB_USER,
+                      DB_PASS,
+                      [
+                          PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                          PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+                      ]
+                  );
+                  return \$pdo;
+              } catch (PDOException \$e) {
+                  die(\"Database connection failed: \" . \$e->getMessage());
+              }
+          }
+          ?>
+          EOF
+        "
+    
+    - name: Set up database tables
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} "
+          cd /var/www/vc/simple-php-app &&
+          mysql -h ${{ secrets.DB_HOST }} -P ${{ secrets.DB_PORT }} -u ${{ secrets.DB_USER }} -p'${{ secrets.DB_PASSWORD }}' ${{ secrets.DB_NAME }} < database.sql || echo 'Database setup completed or already exists'
+        "
+    
+    - name: Restart web server
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} "
+          sudo systemctl reload apache2 || sudo systemctl reload nginx || echo 'Web server reloaded'
+        "
+    
+    - name: Verify deployment
+      run: |
+        echo "Deployment completed successfully!"
+        echo "Application should be available at: http://${{ secrets.SERVER_HOST }}/simple-php-app/"

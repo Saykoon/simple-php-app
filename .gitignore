@@ -12,6 +12,10 @@ Thumbs.db
 *.temp
 *.log
 
+# Backup files
+*.backup
+*.backup.*
+
 # Configuration files (if containing sensitive data)
 # config.php (uncomment if you want to exclude database credentials)
 

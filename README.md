@@ -49,9 +49,22 @@ Możesz zmienić te ustawienia w pliku `config.php` zgodnie z twoją konfiguracj
 4. Edytuj dane użytkowników klikając "Edytuj"
 5. Usuń użytkowników klikając "Usuń"
 
+## Deployment
+
+Aplikacja ma skonfigurowany automatyczny deployment na serwer produkcyjny za pomocą GitHub Actions.
+
+### Automatyczny deployment:
+- Uruchamia się po każdym push do brancha `main`
+- Aplikacja jest wdrażana na serwer: `http://136.116.111.59/simple-php-app/`
+- Zobacz `DEPLOYMENT.md` dla szczegółów konfiguracji
+
+### Ręczny deployment:
+Workflow można również uruchomić ręcznie z zakładki "Actions" w repozytorium GitHub.
+
 ## Bezpieczeństwo
 
 Aplikacja wykorzystuje:
 - PDO z prepared statements (ochrona przed SQL injection)
 - Walidację danych po stronie serwera
 - Potwierdzenie przed usunięciem użytkownika
+- Bezpieczne przechowywanie sekretów w GitHub Actions

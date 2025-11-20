@@ -9,12 +9,13 @@ Aby workflow działał poprawnie, musisz ustawić następujące sekrety w swoim 
 ### 2. Dodaj następujące sekrety:
 
 #### Server Configuration:
-- **SSH_PRIVATE_KEY**: Klucz SSH do łączenia się z serwerem
+- **PRIVATE_SSH_KEY**: Klucz SSH do łączenia się z serwerem
   ```
   Pobierz klucz z: github.com/valdemarcz/uwb_app/gcp_vm_key
   Skopiuj zawartość całego klucza prywatnego (włącznie z -----BEGIN ... END-----)
   ```
 
+- **SSH_PASSPHRASE**: `github` (hasło do klucza SSH)
 - **SERVER_HOST**: `136.116.111.59`
 - **SSH_USER**: `github-actions`
 
@@ -24,13 +25,6 @@ Aby workflow działał poprawnie, musisz ustawić następujące sekrety w swoim 
 - **DB_NAME**: `[TWÓJ_NUMER_ALBUMU]` (zastąp swoim numerem albumu)
 - **DB_USER**: `stud`
 - **DB_PASSWORD**: `Uwb123!!`
-
-#### GCP Configuration (jeśli potrzebne):
-- **GCP_SA_KEY**: Zawartość pliku JSON z kluczem serwisowym
-  ```
-  Pobierz z: github.com/valdemarcz/uwb_app/blob/main/peak-vista-478015-f6-6e6f1f882985.json
-  Skopiuj całą zawartość pliku JSON
-  ```
 
 ## Instrukcje ustawiania sekretów:
 

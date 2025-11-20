@@ -1,4 +1,4 @@
-name: Deploy PHP Application
+name: Deploy PHP Application to Server
 
 on:
   push:
@@ -12,87 +12,60 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     
-    - name: Setup SSH key
+    - name: Create production config
       run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.PRIVATE_SSH_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
-    
-    - name: Test SSH connection
-      run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} "echo 'Connected to server'; pwd; whoami; ls -la"
-    
-    - name: Deploy to server (without sudo)
-      run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} "
-          cd /var/www/vc &&
-          if [ -d simple-php-app ]; then
-            mv simple-php-app simple-php-app.backup.\$(date +%Y%m%d_%H%M%S)
-          fi &&
-          git clone https://github.com/${{ github.repository }}.git simple-php-app &&
-          cd simple-php-app &&
-          chmod -R 755 . 2>/dev/null || echo 'Permissions set as much as possible'
-        "
-    
-    - name: Update database configuration
-      run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} "
-          cd /var/www/vc/simple-php-app &&
-          cat > config.php << 'EOF'
-          <?php
-          // Production database configuration
-          define('DB_HOST', '${{ secrets.DB_HOST }}:${{ secrets.DB_PORT }}');
-          define('DB_NAME', '${{ secrets.DB_NAME }}');
-          define('DB_USER', '${{ secrets.DB_USER }}');
-          define('DB_PASS', '${{ secrets.DB_PASSWORD }}');
+        cat > config.php << 'EOF'
+        <?php
+        // Production database configuration
+        define('DB_HOST', '${{ secrets.DB_HOST }}:${{ secrets.DB_PORT }}');
+        define('DB_NAME', '${{ secrets.DB_NAME }}');
+        define('DB_USER', '${{ secrets.DB_USER }}');
+        define('DB_PASS', '${{ secrets.DB_PASSWORD }}');
 
-          // Create database connection
-          function getConnection() {
-              try {
-                  \$pdo = new PDO(
-                      \"mysql:host=\" . DB_HOST . \";dbname=\" . DB_NAME . \";charset=utf8\",
-                      DB_USER,
-                      DB_PASS,
-                      [
-                          PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                          PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-                      ]
-                  );
-                  return \$pdo;
-              } catch (PDOException \$e) {
-                  die(\"Database connection failed: \" . \$e->getMessage());
-              }
-          }
-          ?>
-          EOF
-        "
+        // Create database connection
+        function getConnection() {
+            try {
+                $pdo = new PDO(
+                    "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8",
+                    DB_USER,
+                    DB_PASS,
+                    [
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+                    ]
+                );
+                return $pdo;
+            } catch (PDOException $e) {
+                die("Database connection failed: " . $e->getMessage());
+            }
+        }
+        ?>
+        EOF
     
-    - name: Set up database tables (if possible)
-      run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} "
-          cd /var/www/vc/simple-php-app &&
-          mysql -h ${{ secrets.DB_HOST }} -P ${{ secrets.DB_PORT }} -u ${{ secrets.DB_USER }} -p'${{ secrets.DB_PASSWORD }}' ${{ secrets.DB_NAME }} < database.sql 2>/dev/null || echo 'Database setup: Please run database.sql manually if needed'
-        "
+    - name: Copy files to server
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.PRIVATE_SSH_KEY }}
+        passphrase: ${{ secrets.SSH_PASSPHRASE }}
+        source: "./"
+        target: "/var/www/vc/simple-php-app"
+        overwrite: true
+        rm: false
     
-    - name: Verify deployment
-      run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} "
-          cd /var/www/vc/simple-php-app &&
-          echo 'Files deployed:' &&
-          ls -la &&
-          echo 'Config check:' &&
-          head -5 config.php
-        "
-    
-    - name: Deployment summary
-      run: |
-        echo "✅ Deployment completed!"
-        echo "📁 Application deployed to: /var/www/vc/simple-php-app/"
-        echo "🌐 Should be available at: http://${{ secrets.SERVER_HOST }}/simple-php-app/"
-        echo "📋 Manual steps if needed:"
-        echo "   - Check file permissions"
-        echo "   - Verify database connection"
-        echo "   - Run database.sql if tables don't exist"
+    - name: Set permissions and setup database
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.PRIVATE_SSH_KEY }}
+        passphrase: ${{ secrets.SSH_PASSPHRASE }}
+        script: |
+          cd /var/www/vc/simple-php-app
+          chmod -R 755 . 2>/dev/null || echo "Permissions set as much as possible"
+          mysql -h ${{ secrets.DB_HOST }} -P ${{ secrets.DB_PORT }} -u ${{ secrets.DB_USER }} -p'${{ secrets.DB_PASSWORD }}' ${{ secrets.DB_NAME }} < database.sql 2>/dev/null || echo "Database setup: tables may already exist"
+          echo "Deployment completed successfully!"
+          echo "Application should be available at: http://${{ secrets.SERVER_HOST }}/simple-php-app/"

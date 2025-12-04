@@ -11,6 +11,7 @@ Celem projektu było utworzenie prostej aplikacji PHP z połączeniem do bazy da
 
 ### 1.1 Specyfikacja środowiska
 - **Serwer docelowy:** 136.116.111.59
+- **Port SSH:** 8002 (niestandardowy)
 - **Użytkownik SSH:** github-actions
 - **Katalog deployment:** /var/www/html/simple-php-app
 - **Baza danych:** Google Cloud SQL (host: 34.58.246.93)
@@ -163,6 +164,13 @@ Podczas implementacji napotkano następujące problemy i ich rozwiązania:
 **Rozwiązanie:** 
 - Zmiana ścieżki z /var/www/vc na /var/www/html
 - Dodanie debugging do sprawdzenia lokalizacji plików
+
+#### Problem 4: SSH Connection Timeout
+**Przyczyna:** Firewall serwera blokuje połączenia z GitHub Actions lub używany jest niestandardowy port SSH
+**Rozwiązanie:** 
+- Konfiguracja portu SSH na 8002 (niestandardowy port używany przez serwer)
+- Zwiększenie timeoutów połączenia (60s timeout, 10m command timeout)
+- Dodanie testów connectivity przed deployment
 
 ## 5. Weryfikacja wdrożenia
 

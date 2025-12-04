@@ -18,6 +18,7 @@ Aby workflow działał poprawnie, musisz ustawić następujące sekrety w swoim 
 - **SSH_PASSPHRASE**: `github` (hasło do klucza SSH)
 - **SERVER_HOST**: `136.116.111.59`
 - **SSH_USER**: `github-actions`
+- **SSH_PORT**: Port SSH jest ustawiony na `8002` (niestandardowy)
 
 #### Database Configuration:
 - **DB_HOST**: `34.58.246.93` (Google Cloud SQL)

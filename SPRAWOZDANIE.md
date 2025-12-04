@@ -1,7 +1,7 @@
 # Sprawozdanie: Wdrożenie aplikacji PHP za pomocą GitHub Actions
 
 **Autor:** [Twoje imię i nazwisko]  
-**Data:** 27 listopada 2025  
+**Data:** 4 grudnia 2025  
 **Przedmiot:** [Nazwa przedmiotu]  
 **Temat:** Automatyczne wdrażanie aplikacji PHP na serwer za pomocą CI/CD
 
@@ -10,11 +10,13 @@
 Celem projektu było utworzenie prostej aplikacji PHP z połączeniem do bazy danych oraz skonfigurowanie automatycznego procesu wdrażania (deployment) na serwer produkcyjny za pomocą GitHub Actions.
 
 ### 1.1 Specyfikacja środowiska
+- **Numer albumu:** 89419
+- **Przydzielony port:** 8002
 - **Serwer docelowy:** 136.116.111.59
 - **Port SSH:** 8002 (niestandardowy)
 - **Użytkownik SSH:** github-actions
 - **Katalog deployment:** /var/www/html/simple-php-app
-- **Baza danych:** Google Cloud SQL (host: 34.58.246.93)
+- **Baza danych:** Google Cloud SQL (host: 34.58.246.93, DB: stud89419)
 - **Repozytorium:** https://github.com/Saykoon/simple-php-app
 
 ## 2. Architektura aplikacji
@@ -25,11 +27,15 @@ simple-php-app/
 ├── index.php              # Główna aplikacja z interfejsem użytkownika
 ├── config.php             # Konfiguracja połączenia z bazą danych (lokalna)
 ├── config.production.php  # Szablon konfiguracji produkcyjnej
-├── database.sql           # Struktura bazy danych i przykładowe dane
+├── database.sql           # Struktura bazy danych (przestarzały)
+├── sql/
+│   └── 001_create_users.sql  # Skrypt SQL dla automatycznej migracji
 ├── README.md              # Dokumentacja projektu
 ├── DEPLOYMENT.md          # Instrukcje wdrażania
+├── SPRAWOZDANIE.md        # Sprawozdanie z projektu
 ├── .github/workflows/
-│   └── deploy.yml         # Workflow GitHub Actions
+│   ├── deploy.yml         # Workflow wdrożenia aplikacji
+│   └── sql_execution.yml  # Workflow migracji bazy danych
 └── .gitignore             # Pliki ignorowane przez Git
 ```
 
@@ -57,7 +63,43 @@ on:
     branches: [ main ]
 ```
 
-### 3.2 Kroki procesu wdrażania
+### 3.2 Workflow automatycznego wykonywania SQL (sql_execution.yml)
+
+Utworzono osobny workflow do automatycznego wykonywania skryptów SQL:
+
+```yaml
+name: DB Migrations
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install MySQL Client
+        run: |
+          sudo apt update
+          sudo apt install -y mysql-client
+      
+      - name: Run SQL script
+        run: |
+          mysql --host=$DB_HOST --user=$DB_USER --password=$DB_PASSWORD $DB_NAME < ./sql/001_create_users.sql
+```
+
+**Zalety rozwiązania:**
+- Automatyczne tworzenie tabel przy każdym push do main
+- Możliwość ręcznego uruchomienia przez workflow_dispatch
+- Bezpośrednie połączenie z Google Cloud SQL
+- Wykorzystanie INSERT...ON DUPLICATE KEY UPDATE dla idempotentności
+
+### 3.3 Kroki procesu wdrażania aplikacji (deploy.yml)
 
 #### Krok 1: Checkout kodu
 ```yaml
@@ -97,7 +139,7 @@ Wykorzystuje akcję appleboy/scp-action do bezpiecznego przesłania plików prze
 ```
 Ustawia uprawnienia plików i inicjalizuje tabele bazy danych.
 
-### 3.3 GitHub Secrets
+### 3.4 GitHub Secrets
 
 Skonfigurowano następujące zmienne środowiskowe w GitHub Secrets:
 
@@ -172,6 +214,14 @@ Podczas implementacji napotkano następujące problemy i ich rozwiązania:
 - Zwiększenie timeoutów połączenia (60s timeout, 10m command timeout)
 - Dodanie testów connectivity przed deployment
 
+#### Problem 5: Setup SSH key mkdir error (GitHub Actions cache)
+**Przyczyna:** GitHub Actions cache starą wersję workflow z manualnym setupem SSH
+**Rozwiązanie:**
+- Usunięcie wszystkich kroków manualnego setup SSH
+- Pełne poleganie na appleboy/scp-action i appleboy/ssh-action
+- Dodanie workflow_dispatch trigger do wymuszenia odświeżenia cache
+- Uproszczenie workflow do minimum zgodnie z przykładem profesora
+
 ## 5. Weryfikacja wdrożenia
 
 ### 5.1 Testy funkcjonalne
@@ -192,17 +242,21 @@ Po udanym deployment przeprowadzono następujące testy:
    - ✅ Operacje SELECT/INSERT/UPDATE/DELETE
 
 ### 5.2 Automatyzacja CI/CD
-- ✅ Automatyczne wdrażanie przy push do main branch
+- ✅ Automatyczne wdrażanie aplikacji przy push do main branch (deploy.yml)
+- ✅ Automatyczne wykonywanie skryptów SQL przy push do main (sql_execution.yml)
 - ✅ Bezpieczne przechowywanie credentials w GitHub Secrets
-- ✅ Proper error handling i logging
+- ✅ Możliwość ręcznego uruchomienia obu workflow (workflow_dispatch)
+- ✅ Idempotentne skrypty SQL (ON DUPLICATE KEY UPDATE)
 
 ## 6. Wnioski
 
 ### 6.1 Osiągnięte cele
 1. Pomyślnie utworzono funkcjonalną aplikację PHP z interfejsem CRUD
-2. Skonfigurowano automatyczny proces CI/CD za pomocą GitHub Actions
+2. Skonfigurowano automatyczny proces CI/CD za pomocą GitHub Actions (2 workflow)
 3. Wdrożono aplikację na serwer produkcyjny z prawidłowym połączeniem do bazy danych
-4. Zabezpieczono proces deployment poprzez GitHub Secrets
+4. Zaimplementowano automatyczne wykonywanie skryptów SQL (migracje)
+5. Zabezpieczono proces deployment poprzez GitHub Secrets
+6. Aplikacja automatycznie łączy się z Google Cloud SQL i wyświetla dane
 
 ### 6.2 Korzyści z zastosowanego rozwiązania
 - **Automatyzacja:** Każda zmiana w kodzie automatycznie trafia na serwer
@@ -224,10 +278,12 @@ Po udanym deployment przeprowadzono następujące testy:
 - **GitHub Actions:** https://github.com/Saykoon/simple-php-app/actions
 
 ### 7.2 Kluczowe pliki konfiguracyjne
-- `.github/workflows/deploy.yml` - Workflow CI/CD
-- `config.php` - Konfiguracja bazy danych
-- `database.sql` - Schema bazy danych
+- `.github/workflows/deploy.yml` - Workflow wdrożenia aplikacji
+- `.github/workflows/sql_execution.yml` - Workflow migracji SQL
+- `config.php` - Konfiguracja bazy danych (lokalna)
+- `sql/001_create_users.sql` - Skrypt SQL do automatycznej migracji
 - `DEPLOYMENT.md` - Instrukcje deployment
+- `SPRAWOZDANIE.md` - Niniejsze sprawozdanie
 
 ---
 

@@ -53,10 +53,9 @@ jobs:
         key: ${{ secrets.PRIVATE_SSH_KEY }}
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
         source: "./"
-        target: "/var/www/html/simple-php-app"
+        target: "/var/www/html"
         overwrite: true
-        rm: false
-        strip_components: 0
+        rm: true
     
     - name: Set permissions
       uses: appleboy/ssh-action@v1.0.3
@@ -66,6 +65,6 @@ jobs:
         key: ${{ secrets.PRIVATE_SSH_KEY }}
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
         script: |
-          cd /var/www/html/simple-php-app
+          cd /var/www/html
           chmod -R 755 .
           echo "Deployment completed successfully!"

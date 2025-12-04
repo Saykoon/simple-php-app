@@ -59,10 +59,16 @@ jobs:
           echo "❌ SSH key does not end with -----END"
         fi
     
+    - name: Test SSH connectivity
+      run: |
+        echo "Testing SSH port 22 connectivity to ${{ secrets.SERVER_HOST }}..."
+        timeout 10 bash -c "</dev/tcp/${{ secrets.SERVER_HOST }}/22" && echo "✅ Port 22 is reachable" || echo "⚠️ Port 22 might be blocked or slow"
+    
     - name: Copy files to server
       uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.SERVER_HOST }}
+        port: ${{ secrets.SSH_PORT || 22 }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.PRIVATE_SSH_KEY }}
         passphrase: ${{ secrets.SSH_PASSPHRASE || '' }}
@@ -71,14 +77,19 @@ jobs:
         overwrite: true
         rm: false
         strip_components: 0
+        timeout: 60s
+        command_timeout: 10m
     
     - name: Set permissions and setup database
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.SERVER_HOST }}
+        port: ${{ secrets.SSH_PORT || 22 }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.PRIVATE_SSH_KEY }}
         passphrase: ${{ secrets.SSH_PASSPHRASE || '' }}
+        timeout: 60s
+        command_timeout: 10m
         script: |
           echo "=== CHECKING FILE LOCATIONS ==="
           echo "Contents of /var/www/vc:"

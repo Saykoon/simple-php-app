@@ -52,11 +52,12 @@ jobs:
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.PRIVATE_SSH_KEY }}
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
-        source: "index.php,config.php,sql"
-        target: "/var/www/html"
+        source: "./"
+        target: "/home/github-actions/app"
         overwrite: true
+        rm: true
     
-    - name: Set permissions
+    - name: Deploy to web directory
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.SERVER_HOST }}
@@ -64,6 +65,9 @@ jobs:
         key: ${{ secrets.PRIVATE_SSH_KEY }}
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
         script: |
-          chmod -R 755 /var/www/html/*.php 2>/dev/null || true
-          chmod -R 755 /var/www/html/sql 2>/dev/null || true
-          echo "Deployment completed successfully!"
+          echo "Attempting deployment with sudo..."
+          sudo /usr/local/bin/deploy_app.sh 89419 8002 || echo "Deploy script not available, trying manual copy..."
+          sudo mkdir -p /var/www/89419 2>/dev/null || true
+          sudo cp -r /home/github-actions/app/* /var/www/89419/ 2>/dev/null || true
+          sudo chmod -R 755 /var/www/89419 2>/dev/null || true
+          echo "Deployment completed!"

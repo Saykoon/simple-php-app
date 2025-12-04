@@ -45,25 +45,6 @@ jobs:
         ?>
         EOF
     
-    - name: Debug SSH key format
-      run: |
-        echo "Checking SSH key format..."
-        if [[ "${{ secrets.PRIVATE_SSH_KEY }}" == *"-----BEGIN"* ]]; then
-          echo "✅ SSH key starts correctly"
-        else
-          echo "❌ SSH key does not start with -----BEGIN"
-        fi
-        if [[ "${{ secrets.PRIVATE_SSH_KEY }}" == *"-----END"* ]]; then
-          echo "✅ SSH key ends correctly" 
-        else
-          echo "❌ SSH key does not end with -----END"
-        fi
-    
-    - name: Test SSH connectivity
-      run: |
-        echo "Testing SSH port 8002 connectivity to ${{ secrets.SERVER_HOST }}..."
-        timeout 10 bash -c "</dev/tcp/${{ secrets.SERVER_HOST }}/8002" && echo "✅ Port 8002 is reachable" || echo "⚠️ Port 8002 might be blocked or slow"
-    
     - name: Copy files to server
       uses: appleboy/scp-action@v0.1.7
       with:

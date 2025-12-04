@@ -20,11 +20,12 @@ Aby workflow działał poprawnie, musisz ustawić następujące sekrety w swoim 
 - **SSH_USER**: `github-actions`
 
 #### Database Configuration:
-- **DB_HOST**: `136.114.93.122`
-- **DB_PORT**: `8002`
-- **DB_NAME**: `[TWÓJ_NUMER_ALBUMU]` (zastąp swoim numerem albumu)
+- **DB_HOST**: `34.58.246.93` (Google Cloud SQL)
+- **DB_NAME**: `stud[NUMER_ALBUMU]` (np. stud88327)
 - **DB_USER**: `stud`
 - **DB_PASSWORD**: `Uwb123!!`
+
+**Uwaga:** Baza danych używa Google Cloud SQL. Upewnij się, że IP serwera (136.116.111.59) jest dozwolone w Cloud SQL Network.
 
 ## Instrukcje ustawiania sekretów:
 
